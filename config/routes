@@ -1,0 +1,4 @@
+GET:/                       | Index::index
+
+GET:/solver/{year}/{day}    | Solver::index
+POST:/solver/{year}/{day}   | Solver::solve
