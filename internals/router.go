@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 )
 
 func NewRouter(configFile string) http.Handler {
@@ -20,7 +21,7 @@ func NewRouter(configFile string) http.Handler {
 	router.supportedMethods[http.MethodOptions] = true
 
 	// Regex for path validation (very restrictive, I like it that way - deal with it)
-	router.pathRegex = regexp.MustCompile(`^[0-9a-z\-\\]$`)
+	router.pathRegex = regexp.MustCompile(`^[{}0-9a-z\-/]+$`)
 
 	// Init routes
 	router.routes = make(map[string][]route)
@@ -28,8 +29,10 @@ func NewRouter(configFile string) http.Handler {
 	// Parse config file
 	router.parseConfiguration()
 
-	log.Printf("Router parses: %v", router.parses)
-	log.Print(router.routes)
+	log.Print("Literal routes:")
+	log.Print(router.literalRoutes)
+	log.Print("Parameter routes:")
+	log.Print(router.parameterRoutes)
 
 	return router
 }
@@ -38,8 +41,15 @@ func NewRouter(configFile string) http.Handler {
  * Route definition
  */
 type route struct {
-	method string
-	path   string
+	method 		string
+	path   		string
+	parts  		[]routePart
+	parameters 	map[string]string
+}
+
+type routePart struct {
+	partType 	int
+	value 		string
 }
 
 /**
@@ -51,11 +61,72 @@ type router struct {
 	routes			 map[string][]route
 	pathRegex		 *regexp.Regexp
 	parses 			 int
+
+	/**
+	 * Literal paths match the input path fully, meaning no user-input parameters are parsed.
+	 * They are in format of [GET][Path] -> Route
+	 */
+	literalRoutes		map[string]map[string]route
+
+	/**
+	 * Parameter paths match urls with user-input parameters, which should go into given parameter placeholder or name.
+	 */
+	parameterRoutes		map[string][]route
 }
 
 func (router *router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	route, isMatched := router.match(r.Method, r.URL.Path)
+	log.Printf("Route matched in %v", time.Since(start))
+
+	if !isMatched {
+		w.WriteHeader(404)
+		return
+	}
+
+	log.Printf("Matched route: %v", route)
+
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Done"))
+	w.Write([]byte("Route matched!"))
+}
+
+func (router *router) match(method string, path string) (route, bool) {
+	log.Printf("Method: %v | Path: %v", method, path)
+
+	if _, exists := router.literalRoutes[method]; exists {
+		if _, exists := router.literalRoutes[method][path]; exists {
+			return router.literalRoutes[method][path], true
+		}
+	}
+
+	pathParts := strings.Split(strings.Trim(path, "/"), "/")
+	pathLength := len(pathParts)
+
+	if _, exists := router.parameterRoutes[method]; exists {
+		RouteMatch:
+		for i := range router.parameterRoutes[method] {
+			route := router.parameterRoutes[method][i]
+			route.parameters = make(map[string]string)
+
+			if len(route.parts) != pathLength {
+				continue
+			}
+
+			for j := range route.parts {
+				if route.parts[j].partType == 0 && pathParts[j] != route.parts[j].value {
+					continue RouteMatch
+				}
+
+				if route.parts[j].partType == 1 {
+					route.parameters[route.parts[j].value] = pathParts[j]
+				}
+			}
+
+			return route, true
+		}
+	}
+
+	return route{}, false
 }
 
 func (router *router) parseConfiguration() {
@@ -100,16 +171,85 @@ func (router *router) generateRoute(routeDef string, destination string, paramet
 		return
 	}
 
-	if router.pathRegex.MatchString(routeParts[1]) {
+	if !router.pathRegex.MatchString(routeParts[1]) {
 		log.Printf("ROUTER: Unsupported path in route definition: %v", routeParts[1])
 		return
 	}
 
-	router.routes[routeParts[0]] = append(
-		router.routes[routeParts[0]],
-		route{
-			method: routeParts[0],
-			path: routeParts[1],
-		},
-	)
+	trimmedPath := "/" + strings.Trim(routeParts[1], "/")
+
+	// Parameter route
+	if strings.ContainsRune(routeParts[1], '{') {
+		router.createParameterPath(routeParts[0], trimmedPath, destination, parameters...)
+		return
+	}
+
+	// Literal route
+	router.createLiteralRoute(routeParts[0], trimmedPath, destination, parameters...)
+}
+
+func (router *router) createLiteralRoute(method string, path string, destination string, parameters ...string) {
+	if router.literalRoutes == nil {
+		router.literalRoutes = make(map[string]map[string]route)
+	}
+
+	if _, exists := router.literalRoutes[method]; !exists {
+		router.literalRoutes[method] = make(map[string]route)
+	}
+
+	if _, exists := router.literalRoutes[method][path]; exists {
+		log.Printf("ROUTER: Duplicated literal route: " + path)
+	}
+
+	router.literalRoutes[method][path] = route{
+		method: method,
+		path: path,
+	}
+}
+
+func (router *router) createParameterPath(method string, path string, destination string, parameters ...string) {
+	pathParts := strings.Split(path, "/")
+	routeParts := make([]routePart, 0)
+
+	for i := range pathParts {
+		if i == 0 {
+			continue
+		}
+
+		// Is this a parameter?
+		if strings.HasPrefix(pathParts[i], "{") && strings.HasSuffix(pathParts[i], "}") {
+			if len(pathParts[i]) < 3 {
+				log.Printf("ROUTER: Empty parameter name, skipping route: %v:%v", method, path)
+			}
+
+			paramName := pathParts[i][1:len(pathParts[i]) - 1]
+
+			routeParts = append(routeParts, routePart{
+				partType: 1,
+				value: paramName,
+			})
+
+			continue
+		}
+
+		// Normal literal parameter
+		routeParts = append(routeParts, routePart{
+			partType: 0,
+			value: pathParts[i],
+		})
+	}
+
+	if router.parameterRoutes == nil {
+		router.parameterRoutes = make(map[string][]route)
+	}
+
+	if _, exists := router.parameterRoutes[method]; !exists {
+		router.parameterRoutes[method] = make([]route, 0)
+	}
+
+	router.parameterRoutes[method] = append(router.parameterRoutes[method], route{
+		method: method,
+		path: path,
+		parts: routeParts,
+	})
 }
