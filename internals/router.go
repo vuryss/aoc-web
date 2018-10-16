@@ -1,9 +1,11 @@
 package internals
 
 import (
+	"./service"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -45,11 +47,22 @@ type route struct {
 	path   		string
 	parts  		[]routePart
 	parameters 	map[string]string
+	controller	string
+	action 		string
 }
 
 type routePart struct {
 	partType 	int
 	value 		string
+}
+
+/**
+ * Destination Parameters
+ */
+type RouteParameters struct {
+	response 	http.ResponseWriter
+	request 	*http.Request
+	parameters  map[string]string
 }
 
 /**
@@ -84,7 +97,17 @@ func (router *router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Matched route: %v", route)
+	reflectInstance := reflect.New(reflect.TypeOf(Services[route.controller]).Elem())
+
+	abstractService := reflect.Indirect(reflectInstance).FieldByName("Abstract")
+	abstractService.Set(reflect.ValueOf(&service.Abstract{
+		Request: r,
+		Response: w,
+		Parameters: route.parameters,
+	}))
+
+	methodRef := reflectInstance.MethodByName(route.action)
+	methodRef.Call(nil)
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Route matched!"))
@@ -201,9 +224,17 @@ func (router *router) createLiteralRoute(method string, path string, destination
 		log.Printf("ROUTER: Duplicated literal route: " + path)
 	}
 
+	destinationParts := strings.Split(destination, "::")
+
+	if len(destinationParts) != 2 {
+		log.Printf("ROUTER: Invalid route target: %v", destination)
+	}
+
 	router.literalRoutes[method][path] = route{
 		method: method,
 		path: path,
+		controller: strings.TrimSpace(destinationParts[0]),
+		action: strings.TrimSpace(destinationParts[1]),
 	}
 }
 
@@ -247,9 +278,17 @@ func (router *router) createParameterPath(method string, path string, destinatio
 		router.parameterRoutes[method] = make([]route, 0)
 	}
 
+	destinationParts := strings.Split(destination, "::")
+
+	if len(destinationParts) != 2 {
+		log.Printf("ROUTER: Invalid route target: %v", destination)
+	}
+
 	router.parameterRoutes[method] = append(router.parameterRoutes[method], route{
 		method: method,
 		path: path,
 		parts: routeParts,
+		controller: strings.TrimSpace(destinationParts[0]),
+		action: strings.TrimSpace(destinationParts[1]),
 	})
 }
