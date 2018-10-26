@@ -1,7 +1,10 @@
 package service
 
+import "../../internals/a"
+
+
 type SolverService struct {
-	*Abstract
+	*a.Service
 }
 
 func (service *SolverService) index() {

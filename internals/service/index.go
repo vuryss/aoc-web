@@ -1,9 +1,12 @@
 package service
 
-import "log"
+import (
+	"../../internals/a"
+	"log"
+)
 
 type IndexService struct {
-	*Abstract
+	*a.Service
 }
 
 func (service *IndexService) Index() {

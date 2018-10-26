@@ -1,14 +1,12 @@
-package service
+package a
 
 import (
 	"net/http"
 )
 
-type Interface interface {
-}
-
-type Abstract struct {
+type Service struct {
 	Response 	http.ResponseWriter
 	Request 	*http.Request
 	Parameters  map[string]string
+	View        View
 }
