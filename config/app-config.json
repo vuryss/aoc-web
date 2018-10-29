@@ -1,0 +1,4 @@
+{
+  "views_directory": "internals/views",
+  "layouts_directory": "internals/views/layouts"
+}
