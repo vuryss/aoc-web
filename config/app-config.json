@@ -1,5 +1,6 @@
 {
   "routes_file": "config/routes",
   "views_directory": "internals/views",
-  "layouts_directory": "internals/views/layouts"
+  "layouts_directory": "internals/views/layouts",
+  "default_layout": "default.html"
 }

@@ -1,7 +1,6 @@
-package a
+package core
 
 import (
-	"../core"
 	"net/http"
 )
 
@@ -9,6 +8,6 @@ type Service struct {
 	Response 	http.ResponseWriter
 	Request 	*http.Request
 	Parameters  map[string]string
-	Config 		*core.Config
-	View        View
+	Config 		*Config
+	View        *View
 }

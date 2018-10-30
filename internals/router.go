@@ -1,7 +1,6 @@
 package internals
 
 import (
-	"./a"
 	"./core"
 	"io/ioutil"
 	"log"
@@ -108,11 +107,12 @@ func (router *router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	reflectInstance := reflect.New(reflect.TypeOf(Services[route.controller]).Elem())
 
 	abstractService := reflect.Indirect(reflectInstance).FieldByName("Service")
-	abstractService.Set(reflect.ValueOf(&a.Service{
+	abstractService.Set(reflect.ValueOf(&core.Service{
 		Request		: r,
 		Response	: w,
 		Parameters	: route.parameters,
 		Config		: router.config,
+		View        : core.NewView(router.config),
 	}))
 
 	methodRef := reflectInstance.MethodByName(route.action)

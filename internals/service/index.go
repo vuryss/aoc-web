@@ -1,13 +1,15 @@
 package service
 
 import (
-	"../../internals/a"
+	"../core"
 )
 
 type IndexService struct {
-	*a.Service
+	*core.Service
 }
 
-func (c *IndexService) Index() {
+func (c *IndexService) Index() core.ViewResponse {
 	c.Service.View.SetView("index.html")
+
+	return c.Service.View.Response()
 }
