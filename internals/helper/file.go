@@ -1,11 +1,22 @@
 package helper
 
-import "path"
+import (
+	"path/filepath"
+	"runtime"
+)
 
 func GetProjectDirectory() string {
-	return path.Clean("../../")
+	_, filename, _, ok := runtime.Caller(1)
+
+	if !ok {
+		panic("Cannot resolve current file path - why ?!")
+	}
+
+	dir := filepath.Clean(filepath.Dir(filename) + "../../../")
+
+	return dir
 }
 
 func ResolveProjectFile(file string) string {
-	return path.Join(GetProjectDirectory(), file)
+	return filepath.Join(GetProjectDirectory(), file)
 }

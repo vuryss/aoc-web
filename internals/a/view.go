@@ -1,7 +1,5 @@
 package a
 
-import "../helper"
-
 type View struct {
 	initialized  bool
 	layoutFolder string
@@ -17,6 +15,6 @@ func (view *View) SetView(path string) {
 
 func (view *View) ensureView() {
 	if !view.initialized {
-		view.viewFolder = helper.Config.Get("view_folder")
+		//view.viewFolder, _ = helper.Config.GetString("view_folder")
 	}
 }

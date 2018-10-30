@@ -2,6 +2,7 @@ package internals
 
 import (
 	"./a"
+	"./core"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -11,8 +12,14 @@ import (
 	"time"
 )
 
-func NewRouter(configFile string) http.Handler {
-	router := &router{configFile: configFile}
+func NewRouter(config *core.Config) http.Handler {
+	routersFile, found := config.GetString("routes_file")
+
+	if !found {
+		panic("ROUTER: Cannot find routes file in config")
+	}
+
+	router := &router{config: config, configFile: routersFile}
 
 	// Add allowed methods
 	router.supportedMethods = make(map[string]bool)
@@ -69,6 +76,7 @@ type RouteParameters struct {
  * Router definition
  */
 type router struct {
+	config           *core.Config
 	configFile 		 string
 	supportedMethods map[string]bool
 	routes			 map[string][]route
@@ -101,9 +109,10 @@ func (router *router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	abstractService := reflect.Indirect(reflectInstance).FieldByName("Service")
 	abstractService.Set(reflect.ValueOf(&a.Service{
-		Request: r,
-		Response: w,
-		Parameters: route.parameters,
+		Request		: r,
+		Response	: w,
+		Parameters	: route.parameters,
+		Config		: router.config,
 	}))
 
 	methodRef := reflectInstance.MethodByName(route.action)
@@ -152,6 +161,9 @@ func (router *router) match(method string, path string) (route, bool) {
 	return route{}, false
 }
 
+/**
+ * Parses router configuration from the routes config file and generates ready to use routes in categories.
+ */
 func (router *router) parseConfiguration() {
 	contents, err := ioutil.ReadFile(router.configFile)
 
@@ -181,6 +193,9 @@ func (router *router) parseConfiguration() {
 	router.parses++
 }
 
+/**
+ * Generates a single route based on definition in configuration file
+ */
 func (router *router) generateRoute(routeDef string, destination string, parameters ...string) {
 	routeParts := strings.Split(strings.TrimSpace(routeDef), ":")
 
@@ -211,6 +226,9 @@ func (router *router) generateRoute(routeDef string, destination string, paramet
 	router.createLiteralRoute(routeParts[0], trimmedPath, destination, parameters...)
 }
 
+/**
+ * Creates literal route, which must fully match given URL to be activated
+ */
 func (router *router) createLiteralRoute(method string, path string, destination string, parameters ...string) {
 	if router.literalRoutes == nil {
 		router.literalRoutes = make(map[string]map[string]route)
@@ -238,6 +256,9 @@ func (router *router) createLiteralRoute(method string, path string, destination
 	}
 }
 
+/**
+ * Creates a parametrized route, which matches a dynamic URL with a parameter in it
+ */
 func (router *router) createParameterPath(method string, path string, destination string, parameters ...string) {
 	pathParts := strings.Split(path, "/")
 	routeParts := make([]routePart, 0)
