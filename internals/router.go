@@ -118,15 +118,13 @@ func (router *router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	methodRef := reflectInstance.MethodByName(route.action)
 	responseValue := methodRef.Call(nil)[0]
 	methodRef = responseValue.MethodByName("GetBody")
-	responseBodyValue := methodRef.Call(nil)[0]
+	responseValue = methodRef.Call(nil)[0]
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(responseBodyValue.String()))
+	w.Write([]byte(responseValue.String()))
 }
 
 func (router *router) match(method string, path string) (route, bool) {
-	log.Printf("Method: %v | Path: %v", method, path)
-
 	if _, exists := router.literalRoutes[method]; exists {
 		if _, exists := router.literalRoutes[method][path]; exists {
 			return router.literalRoutes[method][path], true

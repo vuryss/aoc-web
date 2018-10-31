@@ -1,4 +1,6 @@
 GET:/                       | Index::Index
 
+GET:/aoc/{year}             | YearIndex::Index
+
 GET:/solver/{year}/{day}    | Solver::Index
 POST:/solver/{year}/{day}   | Solver::Solve
