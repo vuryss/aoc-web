@@ -5,7 +5,9 @@ type Response interface {
 }
 
 type ViewResponse struct {
-	view *View
+	View *View
 }
 
-
+func (vResponse *ViewResponse) GetBody() string {
+	return vResponse.View.Render()
+}

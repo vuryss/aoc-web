@@ -116,10 +116,12 @@ func (router *router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}))
 
 	methodRef := reflectInstance.MethodByName(route.action)
-	methodRef.Call(nil)
+	responseValue := methodRef.Call(nil)[0]
+	methodRef = responseValue.MethodByName("GetBody")
+	responseBodyValue := methodRef.Call(nil)[0]
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Route matched!"))
+	w.Write([]byte(responseBodyValue.String()))
 }
 
 func (router *router) match(method string, path string) (route, bool) {

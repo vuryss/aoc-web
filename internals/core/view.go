@@ -1,6 +1,10 @@
 package core
 
-import "../helper"
+import (
+	"../helper"
+	"io/ioutil"
+	"strings"
+)
 
 func NewView(config *Config) *View {
 	viewInstance := &View{config: config}
@@ -30,7 +34,7 @@ func NewView(config *Config) *View {
 		defaultLayout = "default.html"
 	}
 
-	viewInstance.layoutFile = defaultLayout
+	viewInstance.layoutFile = helper.ResolveProjectFile(layoutsDirectory + "/" + defaultLayout)
 
 	return viewInstance
 }
@@ -46,13 +50,26 @@ type View struct {
 }
 
 func (view *View) SetView(file string) {
-	view.viewFile = helper.ResolveProjectFile(view.viewFolder + "/" + file)
+	view.viewFile = view.viewFolder + "/" + file
 }
 
 func (view *View) Render() string {
-	return ""
-}
+	// Read layout file
+	layoutContent, err := ioutil.ReadFile(view.layoutFile)
 
-func (view *View) Response() ViewResponse {
-	return ViewResponse{view: view}
+	if err != nil {
+		panic("VIEW: Render cannot read layout file: " + view.layoutFile)
+	}
+
+	// Read view file
+	viewContent, err := ioutil.ReadFile(view.viewFile)
+
+	if err != nil {
+		panic("VIEW: Render cannot read view file: " + view.viewFile)
+	}
+
+	// Replace special placeholder in layout with view content
+	response := strings.Replace(string(layoutContent), "{{__VIEW__}}", string(viewContent), 1)
+
+	return response
 }
