@@ -1,13 +1,17 @@
 {{define "content"}}
+        <h1 class="display-4 text-center">AOC {{.year}}</h1>
 <div id='full-calendar' >
     <ul>
-        <li>MON</li>
-        <li>TUE</li>
-        <li>WED</li>
-        <li>THUR</li>
-        <li>FRI</li>
-        <li>SAT</li>
-        <li>SUN</li>
+        <li class="no-hover">MON</li>
+        <li class="no-hover">TUE</li>
+        <li class="no-hover">WED</li>
+        <li class="no-hover">THUR</li>
+        <li class="no-hover">FRI</li>
+        <li class="no-hover">SAT</li>
+        <li class="no-hover">SUN</li>
+        {{range $i := N (int .skipDays)}}
+                <li class="no-hover">&nbsp;</li>
+        {{end}}
         <li>1</li>
         <li>2</li>
         <li>3</li>
@@ -33,16 +37,6 @@
         <li>23</li>
         <li>24</li>
         <li>25</li>
-        <li>26</li>
-        <li>27</li>
-        <li>28</li>
-        <li>29</li>
-        <li>30</li>
-        <li>31</li>
-        <li>1</li>
-        <li>2</li>
-        <li>3</li>
-        <li>4</li>
     </ul>
 </div>
 
