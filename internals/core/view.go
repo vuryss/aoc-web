@@ -2,8 +2,9 @@ package core
 
 import (
 	"../helper"
-	"io/ioutil"
-	"strings"
+	"bytes"
+	"html/template"
+	"path"
 )
 
 func NewView(config *Config) *View {
@@ -36,6 +37,9 @@ func NewView(config *Config) *View {
 
 	viewInstance.layoutFile = helper.ResolveProjectFile(layoutsDirectory + "/" + defaultLayout)
 
+	// Init view data
+	viewInstance.viewData = make(map[string]string)
+
 	return viewInstance
 }
 
@@ -43,33 +47,33 @@ type View struct {
 	config       *Config
 	layoutFolder string
 	layoutFile   string
-	loadLayout	 bool
 	viewFolder	 string
 	viewFile	 string
-	isDisabled   bool
+	viewData	 map[string]string
 }
 
 func (view *View) SetView(file string) {
 	view.viewFile = view.viewFolder + "/" + file
 }
 
+func (view *View) PassValue(name, value string) {
+	view.viewData[name] = value
+}
+
 func (view *View) Render() string {
-	// Read layout file
-	layoutContent, err := ioutil.ReadFile(view.layoutFile)
+	templ, err := template.ParseFiles(view.layoutFile, view.viewFile)
 
 	if err != nil {
-		panic("VIEW: Render cannot read layout file: " + view.layoutFile)
+		panic("VIEW: Render cannot read or parse views files, Error: " + err.Error())
 	}
 
-	// Read view file
-	viewContent, err := ioutil.ReadFile(view.viewFile)
+	b := bytes.Buffer{}
+
+	err = templ.ExecuteTemplate(&b, path.Base(view.layoutFile), view.viewData)
 
 	if err != nil {
-		panic("VIEW: Render cannot read view file: " + view.viewFile)
+		panic("VIEW: Render cannot render view, Error: " + err.Error())
 	}
 
-	// Replace special placeholder in layout with view content
-	response := strings.Replace(string(layoutContent), "{{__VIEW__}}", string(viewContent), 1)
-
-	return response
+	return b.String()
 }

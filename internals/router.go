@@ -104,7 +104,13 @@ func (router *router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reflectInstance := reflect.New(reflect.TypeOf(Services[route.controller]).Elem())
+	nilService, found := core.ServicesList[route.controller]
+
+	if !found {
+		panic("Service controller not registered in the application!")
+	}
+
+	reflectInstance := reflect.New(reflect.TypeOf(nilService).Elem())
 
 	abstractService := reflect.Indirect(reflectInstance).FieldByName("Service")
 	abstractService.Set(reflect.ValueOf(&core.Service{

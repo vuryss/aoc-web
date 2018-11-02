@@ -14,6 +14,7 @@
 
     <!-- Custom styles for this template -->
     <link href="/assets/css/style.css" rel="stylesheet">
+    <link href="/assets/css/app.css" rel="stylesheet">
 </head>
 
 <body>
@@ -28,18 +29,18 @@
         <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav mr-auto">
                 <li class="nav-item active">
-                    <a class="nav-link" href="#">Home</a>
+                    <a class="nav-link" href="/">Home</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">Year 2017</a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link" href="#">Year 2016</a>
+                    <a class="nav-link" href="/aoc/2017">Year 2017</a>
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="#">Year 2015</a>
+                    <a class="nav-link" href="/aoc/2016">Year 2016</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="/aoc/2015">Year 2015</a>
                 </li>
             </ul>
         </div>
@@ -48,7 +49,7 @@
 
 <!-- Begin page content -->
 <main role="main" class="container">
-    {{__VIEW__}}
+    {{template "content"}}
 </main>
 
 <footer class="footer">
